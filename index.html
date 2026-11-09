@@ -86,7 +86,13 @@ input[type=time],input[type=date]{color-scheme:dark}
 .cell.rest{opacity:.55}
 /* start screen */
 .start{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;cursor:pointer}
-.start .date{color:var(--mute);font-size:15px;margin-bottom:6px}
+.start .mark{width:56px;height:56px;margin-bottom:26px}
+.start .mark svg{width:100%;height:100%;display:block}
+.start .dawn{width:min(84vw,340px);margin:0 0 22px}
+.start .dawn svg{width:100%;height:auto;display:block}
+.start .small-quote{font-family:var(--serif);font-size:19px;line-height:1.4;max-width:320px;color:var(--lume)}
+.start .daycount{color:var(--mute);font-size:15px;margin-top:22px}
+.start .daycount b{color:var(--lume);font-weight:500}
 .ringwrap{position:relative;width:min(78vw,320px);height:min(78vw,320px);margin:18px 0}
 .ringwrap svg{width:100%;height:100%;display:block}
 .ringwrap .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -368,19 +374,25 @@ function ring66(size){
   segs.push(`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="butt" opacity="${op}"/>`)}
  return `<svg class="ring66" viewBox="0 0 ${size} ${size}" role="img" aria-label="Ring of 66 days">${segs.join('')}</svg>`;
 }
+function mark(){return `<svg viewBox="0 0 64 64" role="img" aria-label="Day 66"><circle cx="32" cy="32" r="24" fill="none" stroke="var(--gold)" stroke-width="4" stroke-dasharray="1.6 0.68" opacity=".9"/><text x="32" y="40" text-anchor="middle" font-family="Young Serif,Georgia,serif" font-size="21" fill="var(--lume)">66</text></svg>`}
+function dawn(n){const p=Math.max(0,Math.min(1,n/TOTAL));const W=340,H=210,hz=152,R=66;const cy=hz+R-p*2*R;
+ return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="The sun rises a little every day until day 66"><defs><clipPath id="sky"><rect x="0" y="0" width="${W}" height="${hz}"/></clipPath><radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="55%" stop-color="var(--gold)" stop-opacity=".18"/><stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/></radialGradient></defs>
+ <g clip-path="url(#sky)"><circle cx="${W/2}" cy="${cy.toFixed(1)}" r="${R*1.9}" fill="url(#glow)"/><circle cx="${W/2}" cy="${cy.toFixed(1)}" r="${R}" fill="var(--gold)"/></g>
+ <rect x="0" y="${hz}" width="${W}" height="${H-hz}" fill="var(--case)"/><line x1="0" y1="${hz}" x2="${W}" y2="${hz}" stroke="var(--gold)" stroke-width="1" opacity=".8"/>
+ ${MILESTONES.map(([dn])=>`<line x1="${(W*dn/TOTAL).toFixed(1)}" y1="${hz+8}" x2="${(W*dn/TOTAL).toFixed(1)}" y2="${hz+(dn===TOTAL?22:14)}" stroke="${dn<=n?'var(--gold)':'var(--line2)'}" stroke-width="1.5"/>`).join('')}
+ <line x1="${(W*Math.max(0,Math.min(TOTAL,n))/TOTAL).toFixed(1)}" y1="${hz}" x2="${(W*Math.max(0,Math.min(TOTAL,n))/TOTAL).toFixed(1)}" y2="${H-14}" stroke="var(--lume)" stroke-width="1.5"/></svg>`}
 function viewStart(){
- const t=todayKey(),n=dayNum(t),d=getDay(t);
- const big=n<1?'0':n>TOTAL?'66':String(n);
- const of=n<1?`of 66. Day 1 is ${fmt(START)}.`:n>TOTAL?'and beyond':'of 66';
- const m=metrics();
- let line;
- if(n<1)line='Tomorrow it begins. Tonight: alarm at 06:30, water by the bed.';
- else if(n>TOTAL)line='You kept your word to yourself for 66 days.';
- else line=`${m.onPlan} ${m.onPlan===1?'day':'days'} on plan. ${TOTAL-n} to go.`;
+ const t=todayKey(),n=dayNum(t),d=getDay(t),m=metrics();
+ const mins=nowMin();const sent=sentenceFor(mins>=20*60?'evening':'morning');
+ let count;
+ if(n<1)count=`Day 1 is <b>${fmt(START)}</b>. Tomorrow it begins.`;
+ else if(n>TOTAL)count=`<b>Day 66</b> and beyond.`;
+ else count=`<b>Day ${n}</b> of 66. ${m.onPlan} on plan, ${TOTAL-n} to go.`;
  return `<div class="start fade" data-act="go" data-to="today">
-  <div class="date">${fmt(t)}</div>
-  <div class="ringwrap">${ring66(320)}<div class="mid"><div class="big num">${big}</div><div class="of">${of}</div></div></div>
-  <div class="line">${esc(line)}</div>
+  <div class="mark">${mark()}</div>
+  <div class="dawn">${dawn(n)}</div>
+  <div class="small-quote">${esc(sent.text)}</div>
+  <div class="daycount">${count}</div>
   <div class="dots" aria-label="Today's five checks">${checksOf(d).map(c=>`<b class="${c?'on':''}"></b>`).join('')}</div>
   <div class="hint">Tap to open the day</div>
   ${S.loadError?`<p class="small muted" style="margin-top:14px">${esc(S.loadError)}</p>`:''}
@@ -543,6 +555,7 @@ function viewMirror(){
  const m=metrics(),T=S.settings.targets,n=dayNum(todayKey()),B=badges();
  const tiles=[[m.onPlan,'days on plan'],[m.sober,'sober days'],[m.sessionsDone,'sessions done'],[m.protDays,'protein days'],[m.medit,'scenes done'],[m.sleep,'nights in bed on time']];
  return `<div class="topbar"><h1>Mirror</h1><span class="sub">${n<1?'Day 0':'Day '+Math.min(n,TOTAL)} of 66</span></div>
+ <div class="ringwrap" style="margin:4px auto 18px;width:min(60vw,220px);height:min(60vw,220px)">${ring66(220)}<div class="mid"><div class="big num" style="font-size:min(14vw,52px)">${n<1?'0':Math.min(n,TOTAL)}</div><div class="of">of 66</div></div></div>
  <div class="card"><div class="muted small">Estimated fat change, from your logged deficit</div><div class="serif num" style="font-size:40px;line-height:1.1;margin-top:4px">${m.fed?(m.fatKg>0?'−':m.fatKg<0?'+':'')+Math.abs(m.fatKg).toFixed(1)+' kg':'—'}</div><div class="muted small" style="margin-top:4px">${m.fed?`${m.fed} fully logged days, 7700 kcal per kilogram of fat. The scale will say less than this while muscle comes back.`:'Appears once you log three meals in a day.'}</div></div>
  <div class="tiles" style="margin-top:12px">${tiles.map(([v,k])=>`<div class="tile"><div class="v num">${v}</div><div class="k">${k}</div></div>`).join('')}</div>
  <div class="section"><h2>Weight, 7-day average</h2>${m.avg.length>=2?weightChart(m.avg):'<p class="muted">Weigh yourself each morning at the check-in; the line appears after two mornings. Only the average is shown, never the daily number.</p>'}${m.waist.length?`<p class="muted small">Waist: ${m.waist.map(w=>w.v+' cm on '+fmt(w.date)).join(', ')}.</p>`:''}</div>

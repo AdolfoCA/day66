@@ -524,7 +524,7 @@ function viewScene(){
  const t=todayKey(),n=dayNum(t),med=S.meditations[t],sc=sceneFor(t);
  const hist=Object.values(S.meditations).filter(m=>m.done&&m.date<t).sort((a,b)=>a.date<b.date?1:-1).slice(0,7);
  return `<div class="topbar"><h1>Scene</h1><span class="sub">${fmt(t)}</span></div>
- <p class="muted small">Five minutes, eyes closed, one concrete scene. Not emptying the mind: rehearsing.</p>
+ <p class="muted small">Read the scene once with your eyes open. Then Start, close your eyes, and the voice and the chimes carry you through the five minutes.</p>
  <div class="card" style="margin-top:14px">
   <span class="pill ${sc.kind==='outcome'?'gold':''}">${sc.kind==='outcome'?'Outcome scene':'Obstacle scene'}</span>
   <div class="quote" style="margin-top:12px">${sc.loading?'<span class="spin"></span> Writing today\'s scene':esc(sc.text)}</div>
@@ -535,6 +535,7 @@ function viewScene(){
  <div class="stack" style="margin-top:14px">
   ${med&&med.done?`<div class="notice sea">Done today${med.doneAt?', '+med.doneAt:''}. The scene is in you now.</div>`:`<button class="btn gold" data-act="start-timer">Start the five minutes</button>`}
   <button class="btn ghost" data-act="sheet:ownscene">Write your own scene for today</button>
+  <div class="row" style="padding:4px 2px"><div><div class="t">Voice guidance</div><div class="d muted small">Each phase read aloud, with a soft chime at the changes, so your eyes stay closed.</div></div><button class="check ${S.settings.voice===false?'':'on'}" data-act="toggle-voice" aria-label="Voice guidance">${S.settings.voice===false?'':'<svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none"/></svg>'}</button></div>
  </div>
  <div class="section"><h2>How the five minutes run</h2><div class="list">
   <div class="item"><div class="l"><div class="t">Settle, 1 minute</div><div class="d">Four seconds in, six seconds out.</div></div></div>
@@ -561,12 +562,14 @@ async function generateScene(k,kind){
  }catch(e){}
 }
 function viewTimer(){const sc=sceneFor(todayKey());return `<div class="timer"><div class="phase" id="tphase">Settle</div><div class="clock num" id="tclock">1:00</div><div class="scene" id="tscene">Four seconds in, six seconds out.</div><div class="two" style="margin-top:34px;width:100%;max-width:320px"><button class="btn ghost" data-act="stop-timer">Stop</button><button class="btn gold" data-act="finish-timer">Done early</button></div></div>`}
-let timerI=null;
+let timerI=null,audioCtx=null;
+function chime(n){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();for(let k=0;k<(n||1);k++){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=528;o.connect(g);g.connect(audioCtx.destination);const t=audioCtx.currentTime+k*0.9;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.18,t+0.06);g.gain.exponentialRampToValueAtTime(0.0001,t+1.8);o.start(t);o.stop(t+1.9)}}catch(e){}}
+function say(text){try{if(S.settings.voice===false||!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=0.88;u.pitch=0.95;const v=speechSynthesis.getVoices().find(x=>x.lang==='en-GB')||speechSynthesis.getVoices().find(x=>x.lang&&x.lang.startsWith('en'));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
 function startTimer(){const sc=sceneFor(todayKey()),sent=sentenceFor('morning').text;S.view='timer';render();
- const phases=[[60,'Settle','Four seconds in, six seconds out.'],[180,'The scene',sc.text],[60,'The sentence',sent]];let i=0,left=phases[0][0];
+ const phases=[[60,'Settle','Four seconds in, six seconds out.','Settle. Breathe in for four, out for six. Let the day wait.'],[180,'The scene',sc.text,'The scene. '+sc.text+' Stay in it. See it, hear it, feel it in your body.'],[60,'The sentence',sent,'The sentence. '+sent+' Say it to yourself, slowly, until it is yours again.']];let i=0,left=phases[0][0];
  const paint=()=>{const p=phases[i];const ph=document.getElementById('tphase'),cl=document.getElementById('tclock'),scn=document.getElementById('tscene');if(!ph)return;ph.textContent=p[1];cl.textContent=`${Math.floor(left/60)}:${pad(left%60)}`;scn.textContent=p[2]};
- paint();clearInterval(timerI);
- timerI=setInterval(()=>{left--;if(left<0){i++;if(i>=phases.length){clearInterval(timerI);finishMeditation();return}left=phases[i][0]}paint()},1000);
+ paint();chime(1);say(phases[0][3]);clearInterval(timerI);
+ timerI=setInterval(()=>{left--;if(left<0){i++;if(i>=phases.length){clearInterval(timerI);chime(2);say('Done. Open your eyes. The day is yours.');finishMeditation();return}left=phases[i][0];chime(1);say(phases[i][3])}paint()},1000);
 }
 async function finishMeditation(){clearInterval(timerI);const k=todayKey(),sc=sceneFor(k);const m=Object.assign({},S.meditations[k]||{},{date:k,kind:sc.kind,scene:sc.text,done:true,doneAt:fromMin(nowMin())});S.meditations[k]=m;S.view='scene';render();await store.set('meditations/'+k,m);await saveDay(k,{meditated:true});render()}
 function viewMirror(){
@@ -691,7 +694,8 @@ document.addEventListener('click',async e=>{
  if(act==='reanalyse'){const f=S.sheet.form;if(f.blob){await analysePhoto(f.blob,f.thumb,f.slot,f.grams)}return}
  if(act==='del-meal'){const id=el.dataset.id;S.meals=S.meals.filter(m=>m._id!==id);render();await store.del('meals/'+id);return}
  if(act==='start-timer'){startTimer();return}
- if(act==='stop-timer'){clearInterval(timerI);S.view='scene';render();return}
+ if(act==='stop-timer'){clearInterval(timerI);try{speechSynthesis.cancel()}catch(e){}S.view='scene';render();return}
+ if(act==='toggle-voice'){S.settings.voice=S.settings.voice===false;await store.set('settings/main',S.settings);render();return}
  if(act==='finish-timer'){await finishMeditation();return}
  if(act==='sheet:ownscene'){const sc=sceneFor(todayKey());S.sheet={type:'ownscene',form:{kind:sc.kind,text:(S.meditations[todayKey()]&&S.meditations[todayKey()].own)?sc.text:''}};render();return}
  if(act==='save-ownscene'){const f=S.sheet.form,k=todayKey();if(!f.text||!f.text.trim())return;const m=Object.assign({},S.meditations[k]||{},{date:k,kind:f.kind,scene:f.text.trim(),own:true,done:!!(S.meditations[k]&&S.meditations[k].done)});S.meditations[k]=m;S.sheet=null;render();await store.set('meditations/'+k,m);return}

@@ -32,6 +32,7 @@ input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and
 input::-webkit-calendar-picker-indicator{filter:invert(.8)}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 6l5 5 5-5' fill='none' stroke='%238C97A3' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:14px;padding-right:38px}
 textarea{min-height:84px;resize:vertical}
+::placeholder{color:var(--mute);opacity:.55}
 textarea[readonly]{color:var(--mute)}
 input:focus,select:focus,textarea:focus{border-color:var(--gold)}
 input[type=time],input[type=date]{color-scheme:dark}
@@ -653,19 +654,19 @@ function sheet(){const s=S.sheet,t=todayKey(),d=getDay(t);let inner='';
   <div class="field"><label>Weight on the plate, g (standard portion ${sel?sel.g:''} g)</label><input type="number" inputmode="numeric" value="${f.grams||''}" placeholder="${sel?sel.g:''}" data-field="form:grams"></div>
   ${sel?`<p class="muted small num">${Math.round(sel.kcal*scale)} kcal, ${Math.round(sel.p*scale)} g protein, ${Math.round(sel.f*scale)} g fat, ${Math.round(sel.c*scale)} g carbs, ${Math.round(sel.fi*scale)} g fibre.</p>`:''}
   <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close-sheet">Cancel</button><button class="btn gold" data-act="save-planned">Log this meal</button></div>`}
- if(s.type==='manual'){const f=s.form,ai=!!sampleFn,nums=!ai||f.showNums;
+ if(s.type==='manual'){const f=s.form,ai=true,nums=f.showNums;
   inner=`<h3>What did you eat?</h3>
   <div class="field"><label>Meal</label><div class="seg" style="grid-auto-flow:row;grid-template-columns:1fr 1fr 1fr">${SLOTS.map(([k,l])=>`<button class="${f.slot===k?'on':''}" data-act="form:slot" data-v="${k}">${l.split(',')[0]}${k==='snack1'?' am':k==='snack2'?' pm':''}</button>`).join('')}</div></div>
   <div class="field"><label>Describe it in your own words</label><textarea rows="3" data-field="form:description" placeholder="Canteen plate: couscous, bean stew, two falafel, beetroot, a slice of bread">${esc(f.description||'')}</textarea></div>
-  <div class="two"><div class="field"><label>Weight, g (optional)</label><input type="number" inputmode="numeric" value="${f.grams||''}" data-field="form:grams" placeholder="408"></div>
+  <div class="two"><div class="field"><label>Weight, g (optional)</label><input type="number" inputmode="numeric" value="${f.grams||''}" data-field="form:grams" placeholder="e.g. 150"></div>
   <div class="field"><label>Photo (optional)</label>${f.thumb?`<div class="row" style="justify-content:flex-start;gap:10px"><img class="thumb" style="width:46px;height:46px" src="${f.thumb}" alt=""><button class="gear" data-act="drop-photo">Remove</button></div>`:`<label class="btn sm" style="position:relative;width:100%;min-height:46px">Add a photo<input type="file" accept="image/*" data-field="photo2" style="position:absolute;inset:0;opacity:0;width:100%"></label>`}</div></div>
   ${f.busy?`<div class="notice" style="margin-top:14px"><span class="spin"></span> Working out the numbers</div>`:''}
   ${f.estimated&&!f.busy?`<div class="notice sea" style="margin-top:14px"><div class="num" style="font-weight:600">${f.kcal} kcal, ${f.p} g protein</div><div class="small num">${f.f} g fat, ${f.c} g carbs, ${f.fi} g fibre${f.grams?', '+f.grams+' g':''}</div>${f.tip?`<div class="small" style="margin-top:6px">${esc(f.tip)}</div>`:''}<button class="gear" style="margin-top:6px" data-act="form:showNums">${f.showNums?'Hide the numbers':'Adjust the numbers'}</button></div>`:''}
   ${f.error?`<div class="notice" style="margin-top:14px">${esc(f.error)}</div>`:''}
   ${nums?`<div class="two"><div class="field"><label>kcal</label><input type="number" inputmode="numeric" value="${f.kcal??''}" data-field="form:kcal"></div><div class="field"><label>Protein, g</label><input type="number" inputmode="decimal" value="${f.p??''}" data-field="form:p"></div></div>
   <div class="three"><div class="field"><label>Fat, g</label><input type="number" inputmode="decimal" value="${f.f??''}" data-field="form:f"></div><div class="field"><label>Carbs, g</label><input type="number" inputmode="decimal" value="${f.c??''}" data-field="form:c"></div><div class="field"><label>Fibre, g</label><input type="number" inputmode="decimal" value="${f.fi??''}" data-field="form:fi"></div></div>`:''}
-  <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close-sheet">Cancel</button>${ai&&!f.estimated?`<button class="btn gold" data-act="estimate" ${f.busy?'disabled':''}>Calculate</button>`:`<button class="btn gold" data-act="save-manual" ${f.busy?'disabled':''}>Log this meal</button>`}</div>
-  ${ai&&f.estimated?`<button class="gear" style="margin-top:10px" data-act="estimate">Recalculate after a change</button>`:''}`}
+  <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close-sheet">Cancel</button>${!f.estimated&&!f.showNums?`<button class="btn gold" data-act="estimate" ${f.busy?'disabled':''}>Calculate</button>`:`<button class="btn gold" data-act="save-manual" ${f.busy?'disabled':''}>Log this meal</button>`}</div>
+  ${f.estimated||f.showNums?`<button class="gear" style="margin-top:10px" data-act="estimate">Recalculate after a change</button>`:''}`}
  if(s.type==='data'){inner=`<h3>Your data</h3><p class="muted small">Copy everything here, paste it into Day 66 on another device, and it is all there.</p>
   <div class="field"><label>Everything, as text</label><textarea rows="4" readonly data-field="exportText">${esc(exportData())}</textarea></div>
   <button class="btn sm" data-act="copy-data">${S.copied?'Copied':'Copy'}</button>
@@ -739,6 +740,24 @@ window.addEventListener('hashchange',()=>{let h=location.hash.slice(1);if(h==='y
 /* ========= Photos and estimates ========= */
 function loadImage(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{URL.revokeObjectURL(url);res(img)};img.onerror=rej;img.src=url})}
 function drawTo(img,max,q){const c=document.createElement('canvas');const r=Math.min(1,max/Math.max(img.width,img.height));c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return new Promise(res=>c.toBlob(b=>res({blob:b,dataUrl:c.toDataURL('image/jpeg',q)}),'image/jpeg',q))}
+const FOODS=[ // per 100 g: kcal, protein, fat, carbs, fibre; piece = grams of one; def = usual grams
+ [/protein ?bar/,360,33,12,35,5,60,60],[/whey|protein (shake|powder)/,380,78,5,8,0,0,30],[/greek/,97,9,5,4,0,0,170],[/skyr/,63,11,.2,4,0,0,200],[/yogh?urt/,61,3.5,3.3,4.7,0,0,150],
+ [/alcohol.?free beer|0[,.]0 beer/,25,.3,0,5,0,330,330],[/olive oil|\boil\b/,884,0,100,0,0,13,13],[/peanut butter/,590,25,50,20,6,0,15],[/dark chocolate|chocolate/,600,7.8,43,46,11,0,20],
+ [/apple/,52,.3,.2,14,2.4,180,180],[/banana/,89,1.1,.3,23,2.6,120,120],[/orange|clementine|mandarin/,47,.9,.1,12,2.4,150,150],[/pear/,57,.4,.1,15,3.1,180,180],[/kiwi/,61,1.1,.5,15,3,75,75],[/grape/,69,.7,.2,18,.9,0,100],[/berr/,50,.8,.3,12,2.4,0,100],[/avocado/,160,2,15,9,7,150,150],
+ [/\beggs?\b/,143,12.6,9.5,.7,0,55,55],[/oat|porridge/,379,13,6.5,67,10,0,40],[/granola|muesli/,450,10,15,65,7,0,50],[/milk/,47,3.4,1.5,4.8,0,0,250],[/tortilla|wrap/,300,8,7,50,3,60,60],[/bread|toast|slice/,250,9,3.2,47,6,40,40],
+ [/rice/,130,2.7,.3,28,.4,0,150],[/pasta|spaghetti|penne/,158,5.8,.9,31,1.8,0,200],[/couscous/,112,3.8,.2,23,1.4,0,150],[/quinoa/,120,4.4,1.9,21,2.8,0,150],[/potato/,87,1.9,.1,20,1.8,150,150],
+ [/chickpea/,139,7.6,2.6,22,7.6,0,100],[/lentil/,116,9,.4,20,7.9,0,150],[/bean/,127,8.7,.5,23,6.4,0,100],[/tofu/,144,15,8.7,3,2.3,0,100],[/falafel/,333,13,18,32,5,20,40],[/hummus/,166,8,10,14,6,0,50],
+ [/tuna/,116,26,1,0,0,112,112],[/salmon/,208,20,13,0,0,0,150],[/prawn|shrimp/,99,24,.3,.2,0,0,150],[/cod|white fish|fish/,90,20,1,0,0,0,150],
+ [/parmesan/,431,38,29,4,0,0,15],[/cheese|feta|mozzarella/,330,22,26,2,0,0,30],[/almond|walnut|cashew|\bnuts?\b/,600,20,52,15,8,0,30],[/honey/,304,.3,0,82,0,0,20],
+ [/salad|lettuce|leaves|spinach|rocket/,20,1.5,.3,3,2,0,80],[/tomato/,18,.9,.2,3.9,1.2,120,120],[/carrot/,41,.9,.2,10,2.8,80,80],[/cucumber/,15,.7,.1,3.6,.5,0,100],[/broccoli/,34,2.8,.4,7,2.6,0,100],[/beetroot/,43,1.6,.2,10,2.8,0,80],[/pepper/,26,1,.3,6,2,150,150],[/onion/,40,1.1,.1,9,1.7,100,100],[/courgette|zucchini/,17,1.2,.3,3.1,1,200,200]];
+const WORDNUM={a:1,an:1,one:1,two:2,three:3,four:4,five:5,half:.5};
+function localEstimate(desc,weight){const parts=String(desc||'').toLowerCase().split(/,|;|\+|\band\b|\bwith\b|\n/).map(x=>x.trim()).filter(Boolean);const tot={kcal:0,p:0,f:0,c:0,fi:0,g:0},unknown=[];
+ parts.forEach(part=>{const food=FOODS.find(x=>x[0].test(part));if(!food){unknown.push(part);return}const [,k,p,fa,c,fi,piece,def]=food;
+  const m=part.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|gr|grams?|ml|tbsp|tsp)?\b/);const w=part.match(/\b(a|an|one|two|three|four|five|half)\b/);let g;
+  if(m&&m[2]){const n=parseFloat(m[1].replace(',','.'));g=m[2]==='kg'?n*1000:m[2]==='tbsp'?n*13:m[2]==='tsp'?n*5:n}
+  else{const n=m?parseFloat(m[1].replace(',','.')):w?WORDNUM[w[1]]:null;g=n!=null?(piece?n*piece:n*def):(parts.length===1&&+weight?+weight:(piece||def))}
+  const r=g/100;tot.kcal+=k*r;tot.p+=p*r;tot.f+=fa*r;tot.c+=c*r;tot.fi+=fi*r;tot.g+=g});
+ return {kcal:Math.round(tot.kcal),p:r1(tot.p),f:r1(tot.f),c:r1(tot.c),fi:r1(tot.fi),grams:Math.round(tot.g),unknown,count:parts.length}}
 const slotNow=()=>{const h=new Date().getHours();return h<10?'breakfast':h<12?'snack1':h<14?'lunch':h<17?'snack2':'dinner'};
 async function onPhoto(file,inSheet){
  try{const img=await loadImage(file);const big=await drawTo(img,1024,.82);const small=await drawTo(img,96,.7);
@@ -748,8 +767,12 @@ async function onPhoto(file,inSheet){
  }catch(e){render()}
 }
 async function estimateMeal(){
- const f=S.sheet&&S.sheet.form;if(!f||!sampleFn)return;
+ const f=S.sheet&&S.sheet.form;if(!f)return;
  if(!(f.description||'').trim()&&!f.blob){f.error='Write a few words about the meal, or add a photo.';render();return}
+ const loc=localEstimate(f.description,f.grams);
+ if(!sampleFn||(!f.blob&&loc.count&&!loc.unknown.length)){
+  if(loc.count&&!loc.unknown.length){Object.assign(f,{kcal:loc.kcal,p:loc.p,f:loc.f,c:loc.c,fi:loc.fi,grams:f.grams||loc.grams,tip:'',estimated:true,error:''});render();return}
+  f.showNums=true;f.error=f.blob&&!loc.count?'Reading a photo needs Claude, which this version cannot reach yet. Write what is on the plate instead, or type the numbers.':`I don't know ${loc.unknown.map(x=>'"'+x+'"').join(', ')} yet. Write it as simple foods (rice, beans, salmon, 2 eggs), or type the numbers below.`;render();return}
  f.busy=true;f.error='';render();
  try{const slotName=SLOTS.find(x=>x[0]===f.slot)?.[1]||f.slot;
   const prompt=`You estimate nutrition for Adolfo's personal app Day 66. He is a 28-year-old man, 1.74 m, 80 kg, aiming for about 2200 kcal and 160 g protein a day, mostly fish, legumes and vegetables. This is his ${slotName}.${f.description?` He describes it as: "${f.description}".`:''}${f.blob?' A photo of it is attached.':''}${f.grams?` The total weight on the plate was ${f.grams} g: scale your estimate to that weight.`:' No weight was given: assume a normal adult portion.'} Identify the foods and portion sizes, then estimate totals. Be realistic about oil, dressings and frying. Return JSON only: {"description": "short name of the meal, max 8 words", "grams": estimated total grams as a number, "kcal": number, "protein_g": number, "fat_g": number, "carb_g": number, "fibre_g": number, "tip": "one plain sentence in British spelling, no exclamation marks, no em dashes, about this meal against his protein and calorie targets"}`;

@@ -183,7 +183,8 @@ const FALLBACK_SCENES=[
  ['outcome','New Year\'s Eve at midnight, alcohol-free glass in hand, completely present. The first clear New Year in years.'],
  ['obstacle','Sunday evening, no batch cooked, nothing in the fridge. You make the fast salad, two eggs, chickpeas, tuna, and the week is saved in ten minutes.']
 ].map(([kind,text])=>({kind,text}));
-const WEEK={1:'push',2:'legsA',3:'engine',4:'pull',5:'legsB',6:'conditioning',0:'recovery'};
+const ORDER=['push','legsA','engine','pull','legsB','conditioning','recovery'];
+const typeOf=k=>ORDER[(((dayNum(k)-1)%7)+7)%7];
 const SESSIONS={
  push:{title:'Push',code:'Ps',sub:'Chest, shoulders, triceps',lifts:[
   {n:'Bench press',sets:4,reps:[6,7],kg:60,inc:2.5,wk:2.5,rest:120,main:true},
@@ -306,7 +307,7 @@ const mealsOn=k=>S.meals.filter(m=>m.date===k);
 const totals=k=>mealsOn(k).reduce((t,m)=>({kcal:t.kcal+(+m.kcal||0),p:t.p+(+m.p||0),f:t.f+(+m.f||0),c:t.c+(+m.c||0),fi:t.fi+(+m.fi||0)}),{kcal:0,p:0,f:0,c:0,fi:0});
 function sessionFor(k){
  if(S.sessions[k])return S.sessions[k];
- return {date:k,type:WEEK[weekday(k)],status:'planned',sets:{},minutes:0,short:false};
+ return {date:k,type:typeOf(k),status:'planned',sets:{},minutes:0,short:false};
 }
 const roundTo=(v,step)=>Math.round(v/step)*step;
 function weekOf(n){return Math.max(1,Math.ceil(n/7))}
@@ -374,8 +375,8 @@ function render(){
  else if(v==='start')html=viewStart();
  else{html=`<div class="screen fade">${{today:viewToday,train:viewTrain,eat:viewEat,scene:viewScene,mirror:viewMirror,settings:viewSettings,session:viewSession,timer:viewTimer}[v]().replace(/^/,'')}</div>${['timer'].includes(v)?'':tabs()}`}
  if(S.sheet)html+=sheet();
- app.innerHTML=html;
- window.scrollTo(0,0);
+ const y=window.scrollY;app.innerHTML=html;
+ if(S.view!==S._lastView){window.scrollTo(0,0);S._lastView=S.view}else window.scrollTo(0,y);
 }
 function tabs(){const t=[['today','Today'],['train','Train'],['eat','Eat'],['scene','Scene'],['mirror','Mirror']];const cur=S.view==='session'?'train':S.view==='settings'?'today':S.view;
  return `<nav class="tabs"><div class="in">${t.map(([k,l])=>`<button class="tab ${cur===k?'on':''}" data-act="go" data-to="${k}"><i></i>${l}</button>`).join('')}</div></nav>`}
@@ -450,7 +451,7 @@ const fromMin=n=>`${pad(Math.floor(((n%1440)+1440)%1440/60))}:${pad(((n%60)+60)%
 
 function viewTrain(){
  const t=todayKey(),n=dayNum(t),s=sessionFor(t),base=SESSIONS[s.type];
- const cells=[];for(let i=1;i<=TOTAL;i++){const k=dateOfDay(i),ss=S.sessions[k];const done=ss&&(ss.status==='done'||ss.status==='short');const past=i<n;cells.push(`<button class="cell ${done?'on':''} ${i===n?'today':''} ${!done&&past?'rest':''}" data-act="open-session" data-date="${k}" title="${fmt(k)}">${SESSIONS[WEEK[weekday(k)]].code}</button>`)}
+ const cells=[];for(let i=1;i<=TOTAL;i++){const k=dateOfDay(i),ss=S.sessions[k];const done=ss&&(ss.status==='done'||ss.status==='short');const past=i<n;cells.push(`<button class="cell ${done?'on':''} ${i===n?'today':''} ${!done&&past?'rest':''}" data-act="open-session" data-date="${k}" title="${fmt(k)}">${SESSIONS[typeOf(k)].code}</button>`)}
  return `<div class="topbar"><h1>Train</h1><span class="sub">${esc(phaseOf(n).replace('-',' '))}</span></div>
  <div class="card">
   <div class="muted small">${n<1?'Day 1, '+fmt(START):fmt(t)}</div>
@@ -458,8 +459,8 @@ function viewTrain(){
   <div class="muted">${base.sub}</div>
   <div style="margin-top:14px" class="two"><button class="btn gold" data-act="open-session" data-date="${t}">${s.status==='done'||s.status==='short'?'See the session':'Open the session'}</button><button class="btn" data-act="open-session" data-date="${addDays(t,1)}">Tomorrow</button></div>
  </div>
- <div class="section"><h2>The 66 days</h2><div class="grid66">${cells.join('')}</div><p class="muted small" style="margin-top:8px">Ps push, Pl pull, L legs, E engine, C conditioning, R recovery. Gold is done.</p></div>
- <div class="section"><h2>The week</h2><div class="list">${[1,2,3,4,5,6,0].map(w=>`<div class="item"><div class="l"><div class="t">${DOW[w]}</div><div class="d">${SESSIONS[WEEK[w]].title}, ${SESSIONS[WEEK[w]].sub.toLowerCase()}</div></div></div>`).join('')}</div></div>`;
+ <div class="section"><h2>The 66 days</h2><div class="grid66">${cells.join('')}</div><p class="muted small" style="margin-top:8px">Ps push, L legs, E engine, Pl pull, C conditioning, R recovery, in that order from day 1. Gold is done.</p></div>
+ <div class="section"><h2>The next seven days</h2><div class="list">${[0,1,2,3,4,5,6].map(i=>{const k=addDays(t,i),x=SESSIONS[typeOf(k)];return `<div class="item"><div class="l"><div class="t">${i===0?'Today':fmt(k)}</div><div class="d">${x.title}, ${x.sub.toLowerCase()}</div></div></div>`}).join('')}</div></div>`;
 }
 function viewSession(){
  const k=S.sessionDate,s=sessionFor(k),base=SESSIONS[s.type],n=dayNum(k),lifts=plannedLifts(k),done=s.status==='done'||s.status==='short',isToday=k===todayKey();
@@ -500,7 +501,7 @@ function viewEat(){
  <div class="three" style="margin-top:16px">
   <label class="btn gold" style="position:relative">${sampleFn===null&&S.busy!=='photo'?'Photo':S.busy==='photo'?'<span class="spin"></span>':'Photo'}<input type="file" accept="image/*" capture="environment" data-field="photo" style="position:absolute;inset:0;opacity:0;width:100%"></label>
   <button class="btn" data-act="sheet:planned">Planned</button>
-  <button class="btn" data-act="sheet:manual">Type it</button>
+  <button class="btn" data-act="sheet:manual">Describe it</button>
  </div>
  ${sampleFn?'':'<p class="muted small" style="margin-top:8px">Photo analysis asks Claude the first time you use it. If it is not available here, the photo still logs with your own numbers.</p>'}
  <div class="section"><div class="row"><h2 style="margin:0">Water</h2><span class="num muted">${(d.water/1000).toFixed(2)} of ${(T.water/1000).toFixed(1)} l</span></div>${bar(d.water,T.water,'sea')}<div class="two" style="margin-top:10px"><button class="btn sm" data-act="water" data-ml="250">Glass, 250 ml</button><button class="btn sm" data-act="water" data-ml="500">Bottle, 500 ml</button></div></div>
@@ -652,15 +653,19 @@ function sheet(){const s=S.sheet,t=todayKey(),d=getDay(t);let inner='';
   <div class="field"><label>Weight on the plate, g (standard portion ${sel?sel.g:''} g)</label><input type="number" inputmode="numeric" value="${f.grams||''}" placeholder="${sel?sel.g:''}" data-field="form:grams"></div>
   ${sel?`<p class="muted small num">${Math.round(sel.kcal*scale)} kcal, ${Math.round(sel.p*scale)} g protein, ${Math.round(sel.f*scale)} g fat, ${Math.round(sel.c*scale)} g carbs, ${Math.round(sel.fi*scale)} g fibre.</p>`:''}
   <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close-sheet">Cancel</button><button class="btn gold" data-act="save-planned">Log this meal</button></div>`}
- if(s.type==='manual'){const f=s.form;inner=`<h3>${f.thumb?'Your photo':'Type the meal'}</h3>
-  ${f.thumb?`<div class="row" style="justify-content:flex-start"><img class="thumb" src="${f.thumb}" alt=""><div class="muted small">${esc(f.aiNote||'Edit the numbers if they look wrong.')}</div></div>`:''}
+ if(s.type==='manual'){const f=s.form,ai=!!sampleFn,nums=!ai||f.showNums;
+  inner=`<h3>What did you eat?</h3>
   <div class="field"><label>Meal</label><div class="seg" style="grid-auto-flow:row;grid-template-columns:1fr 1fr 1fr">${SLOTS.map(([k,l])=>`<button class="${f.slot===k?'on':''}" data-act="form:slot" data-v="${k}">${l.split(',')[0]}${k==='snack1'?' am':k==='snack2'?' pm':''}</button>`).join('')}</div></div>
-  <div class="field"><label>What it is</label><input value="${esc(f.description||'')}" data-field="form:description" placeholder="Canteen plate, half vegetables, lentils, rice"></div>
-  <div class="two"><div class="field"><label>Weight on the plate, g</label><input type="number" inputmode="numeric" value="${f.grams||''}" data-field="form:grams" placeholder="optional"></div><div class="field"><label>kcal</label><input type="number" inputmode="numeric" value="${f.kcal||''}" data-field="form:kcal"></div></div>
-  <div class="two"><div class="field"><label>Protein, g</label><input type="number" inputmode="decimal" value="${f.p||''}" data-field="form:p"></div><div class="field"><label>Fat, g</label><input type="number" inputmode="decimal" value="${f.f||''}" data-field="form:f"></div></div>
-  <div class="two"><div class="field"><label>Carbs, g</label><input type="number" inputmode="decimal" value="${f.c||''}" data-field="form:c"></div><div class="field"><label>Fibre, g</label><input type="number" inputmode="decimal" value="${f.fi||''}" data-field="form:fi"></div></div>
-  ${f.thumb&&sampleFn&&sampleImages?`<div class="field"><label>Tell Claude the weight and re-estimate</label><button class="btn sm" data-act="reanalyse">Re-estimate with ${f.grams||'the'} g</button></div>`:''}
-  <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close-sheet">Cancel</button><button class="btn gold" data-act="save-manual">Log this meal</button></div>`}
+  <div class="field"><label>Describe it in your own words</label><textarea rows="3" data-field="form:description" placeholder="Canteen plate: couscous, bean stew, two falafel, beetroot, a slice of bread">${esc(f.description||'')}</textarea></div>
+  <div class="two"><div class="field"><label>Weight, g (optional)</label><input type="number" inputmode="numeric" value="${f.grams||''}" data-field="form:grams" placeholder="408"></div>
+  <div class="field"><label>Photo (optional)</label>${f.thumb?`<div class="row" style="justify-content:flex-start;gap:10px"><img class="thumb" style="width:46px;height:46px" src="${f.thumb}" alt=""><button class="gear" data-act="drop-photo">Remove</button></div>`:`<label class="btn sm" style="position:relative;width:100%;min-height:46px">Add a photo<input type="file" accept="image/*" data-field="photo2" style="position:absolute;inset:0;opacity:0;width:100%"></label>`}</div></div>
+  ${f.busy?`<div class="notice" style="margin-top:14px"><span class="spin"></span> Working out the numbers</div>`:''}
+  ${f.estimated&&!f.busy?`<div class="notice sea" style="margin-top:14px"><div class="num" style="font-weight:600">${f.kcal} kcal, ${f.p} g protein</div><div class="small num">${f.f} g fat, ${f.c} g carbs, ${f.fi} g fibre${f.grams?', '+f.grams+' g':''}</div>${f.tip?`<div class="small" style="margin-top:6px">${esc(f.tip)}</div>`:''}<button class="gear" style="margin-top:6px" data-act="form:showNums">${f.showNums?'Hide the numbers':'Adjust the numbers'}</button></div>`:''}
+  ${f.error?`<div class="notice" style="margin-top:14px">${esc(f.error)}</div>`:''}
+  ${nums?`<div class="two"><div class="field"><label>kcal</label><input type="number" inputmode="numeric" value="${f.kcal??''}" data-field="form:kcal"></div><div class="field"><label>Protein, g</label><input type="number" inputmode="decimal" value="${f.p??''}" data-field="form:p"></div></div>
+  <div class="three"><div class="field"><label>Fat, g</label><input type="number" inputmode="decimal" value="${f.f??''}" data-field="form:f"></div><div class="field"><label>Carbs, g</label><input type="number" inputmode="decimal" value="${f.c??''}" data-field="form:c"></div><div class="field"><label>Fibre, g</label><input type="number" inputmode="decimal" value="${f.fi??''}" data-field="form:fi"></div></div>`:''}
+  <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close-sheet">Cancel</button>${ai&&!f.estimated?`<button class="btn gold" data-act="estimate" ${f.busy?'disabled':''}>Calculate</button>`:`<button class="btn gold" data-act="save-manual" ${f.busy?'disabled':''}>Log this meal</button>`}</div>
+  ${ai&&f.estimated?`<button class="gear" style="margin-top:10px" data-act="estimate">Recalculate after a change</button>`:''}`}
  if(s.type==='data'){inner=`<h3>Your data</h3><p class="muted small">Copy everything here, paste it into Day 66 on another device, and it is all there.</p>
   <div class="field"><label>Everything, as text</label><textarea rows="4" readonly data-field="exportText">${esc(exportData())}</textarea></div>
   <button class="btn sm" data-act="copy-data">${S.copied?'Copied':'Copy'}</button>
@@ -695,8 +700,9 @@ document.addEventListener('click',async e=>{
  if(act==='sheet:planned'){const h=new Date().getHours();const slot=h<10?'breakfast':h<12?'snack1':h<14?'lunch':h<17?'snack2':'dinner';S.sheet={type:'planned',form:{slot,dish:(slot==='breakfast'?BREAKFASTS:slot==='dinner'?DINNERS:SNACKS)[0].id,grams:''}};render();return}
  if(act==='save-planned'){const f=S.sheet.form;const list=BREAKFASTS.concat(SNACKS,DINNERS);const sel=list.find(x=>x.id===f.dish);if(!sel)return;const scale=f.grams?+f.grams/sel.g:1;await addMeal({slot:f.slot,dish:sel.n,description:sel.n,grams:f.grams?+f.grams:sel.g,kcal:Math.round(sel.kcal*scale),p:r1(sel.p*scale),f:r1(sel.f*scale),c:r1(sel.c*scale),fi:r1(sel.fi*scale),source:'plan'});S.sheet=null;render();return}
  if(act==='sheet:manual'){const h=new Date().getHours();const slot=h<10?'breakfast':h<12?'snack1':h<14?'lunch':h<17?'snack2':'dinner';S.sheet={type:'manual',form:{slot}};render();return}
+ if(act==='estimate'){await estimateMeal();return}
+ if(act==='drop-photo'){Object.assign(S.sheet.form,{thumb:null,blob:null,estimated:false});render();return}
  if(act==='save-manual'){const f=S.sheet.form;if(!f.kcal&&!f.p){return}await addMeal({slot:f.slot,description:f.description||'Meal',grams:f.grams?+f.grams:null,kcal:Math.round(+f.kcal||0),p:r1(+f.p||0),f:r1(+f.f||0),c:r1(+f.c||0),fi:r1(+f.fi||0),source:f.thumb?'photo':'manual',thumb:f.thumb||null,ai:f.ai||null});S.sheet=null;render();return}
- if(act==='reanalyse'){const f=S.sheet.form;if(f.blob){await analysePhoto(f.blob,f.thumb,f.slot,f.grams)}return}
  if(act==='del-meal'){const id=el.dataset.id;S.meals=S.meals.filter(m=>m._id!==id);render();await store.del('meals/'+id);return}
  if(act==='start-timer'){startTimer();return}
  if(act==='stop-timer'){clearInterval(timerI);try{speechSynthesis.cancel()}catch(e){}S.view='scene';render();return}
@@ -713,10 +719,10 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target.closest('[data-field]');if(!el)return;const f=el.dataset.field;
- if(f==='photo'){const file=el.files&&el.files[0];if(file)await onPhoto(file);return}
+ if(f==='photo'||f==='photo2'){const file=el.files&&el.files[0];if(file)await onPhoto(file,f==='photo2');return}
  if(f.startsWith('form:')&&S.sheet){S.sheet.form[f.slice(5)]=el.value;if(f==='form:dish'||f==='form:grams')render();return}
 });
-document.addEventListener('input',e=>{const el=e.target.closest('[data-field^="form:"]');if(el&&S.sheet&&el.type!=='time'){S.sheet.form[el.dataset.field.slice(5)]=el.value}});
+document.addEventListener('input',e=>{const el=e.target.closest('[data-field^="form:"]');if(el&&S.sheet&&el.type!=='time'){const k=el.dataset.field.slice(5);S.sheet.form[k]=el.value;if(S.sheet.type==='manual'&&(k==='description'||k==='grams')&&S.sheet.form.estimated&&!S.sheet.form.showNums){S.sheet.form.estimated=false;render();const t=document.querySelector(`[data-field="form:${k}"]`);if(t){t.focus();const v=t.value;t.value='';t.value=v}}}});
 function exportData(){return JSON.stringify({app:'day66',exported:new Date().toISOString(),settings:S.settings,days:S.days,sessions:S.sessions,meals:S.meals,meditations:S.meditations,sentences:S.sentences})}
 async function importData(d){if(!d||d.app!=='day66')throw new Error('format');
  if(d.settings){S.settings=mergeSettings(d.settings);await store.set('settings/main',S.settings)}
@@ -730,25 +736,27 @@ async function addMeal(m){const id=uid();const row=Object.assign({date:todayKey(
 function go(v){S.sheet=null;S.view=v;if(v!=='session')location.hash='#'+(v==='settings'?'yours':v);render()}
 window.addEventListener('hashchange',()=>{let h=location.hash.slice(1);if(h==='yours')h='settings';if(['start','today','train','eat','scene','mirror','settings'].includes(h)&&h!==S.view){S.view=h;render()}});
 
-/* ========= Photos ========= */
+/* ========= Photos and estimates ========= */
 function loadImage(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{URL.revokeObjectURL(url);res(img)};img.onerror=rej;img.src=url})}
 function drawTo(img,max,q){const c=document.createElement('canvas');const r=Math.min(1,max/Math.max(img.width,img.height));c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return new Promise(res=>c.toBlob(b=>res({blob:b,dataUrl:c.toDataURL('image/jpeg',q)}),'image/jpeg',q))}
-async function onPhoto(file){
- S.busy='photo';render();
+const slotNow=()=>{const h=new Date().getHours();return h<10?'breakfast':h<12?'snack1':h<14?'lunch':h<17?'snack2':'dinner'};
+async function onPhoto(file,inSheet){
  try{const img=await loadImage(file);const big=await drawTo(img,1024,.82);const small=await drawTo(img,96,.7);
-  const h=new Date().getHours();const slot=h<10?'breakfast':h<12?'snack1':h<14?'lunch':h<17?'snack2':'dinner';
-  S.sheet={type:'manual',form:{slot,thumb:small.dataUrl,blob:big.blob,aiNote:sampleFn&&sampleImages?'Estimating from the photo':'Type the numbers; photo analysis is not available in this view.'}};
-  S.busy='';render();
-  if(sampleFn&&sampleImages)await analysePhoto(big.blob,small.dataUrl,slot,'');
- }catch(e){S.busy='';render()}
+  if(!inSheet||!S.sheet)S.sheet={type:'manual',form:{slot:slotNow()}};
+  Object.assign(S.sheet.form,{thumb:small.dataUrl,blob:big.blob,estimated:false,error:''});render();
+  if(sampleFn&&!inSheet)await estimateMeal();
+ }catch(e){render()}
 }
-async function analysePhoto(blob,thumb,slot,grams){
- if(!S.sheet||S.sheet.type!=='manual')return;S.sheet.form.aiNote='Estimating from the photo';render();
- try{const slotName=SLOTS.find(x=>x[0]===slot)?.[1]||slot;
-  const prompt=`You estimate nutrition for Adolfo's personal app Day 66. He is a 28-year-old man, 1.74 m, 80 kg, eating about 2200 kcal and 160 g protein a day, fish and vegetables, no meat except what is on the plate. This photo is his ${slotName}${grams?`, and the plate weighed ${grams} g in total (scale the estimate to that weight)`:''}. His planned meals, if this looks like one of them: shake with milk, whey, banana and oats (450 kcal, 40 g protein); breakfast burrito with beans and two eggs (450 kcal, 28 g); skyr 200 g (200 kcal, 20 g); DTU canteen vegetarian plate paid by weight; dinners: bean and rice burritos, pasta with courgette and prawns, pasta al pomodoro with beans and parmesan, salmon bowl with quinoa, red lentil stew, big salad with eggs, chickpeas and tuna. Identify the foods and portion sizes, then estimate totals. Be realistic about oil and sauces. Return JSON only: {"description": "short name of the meal, max 8 words", "grams": estimated total grams as a number, "kcal": number, "protein_g": number, "fat_g": number, "carb_g": number, "fibre_g": number, "confidence": "low"|"medium"|"high", "tip": "one plain sentence in British spelling, no exclamation marks, no em dashes, about this plate against his targets"}`;
-  const r=await sampleFn.json(prompt,{images:[blob],modelTier:'default'});
-  if(S.sheet&&S.sheet.type==='manual'){const f=S.sheet.form;f.description=r.description||f.description;f.grams=grams||r.grams||f.grams;f.kcal=Math.round(+r.kcal||0);f.p=r1(+r.protein_g||0);f.f=r1(+r.fat_g||0);f.c=r1(+r.carb_g||0);f.fi=r1(+r.fibre_g||0);f.ai={confidence:r.confidence,tip:r.tip};f.aiNote=`${r.confidence?r.confidence[0].toUpperCase()+r.confidence.slice(1)+' confidence. ':''}${r.tip||''} Edit anything that looks wrong.`;render()}
- }catch(e){if(S.sheet&&S.sheet.type==='manual'){S.sheet.form.aiNote=e&&e.code==='not_granted'?'Photo analysis was not allowed here. Type the numbers instead.':'The estimate did not come through. Type the numbers, or try again.';render()}}
+async function estimateMeal(){
+ const f=S.sheet&&S.sheet.form;if(!f||!sampleFn)return;
+ if(!(f.description||'').trim()&&!f.blob){f.error='Write a few words about the meal, or add a photo.';render();return}
+ f.busy=true;f.error='';render();
+ try{const slotName=SLOTS.find(x=>x[0]===f.slot)?.[1]||f.slot;
+  const prompt=`You estimate nutrition for Adolfo's personal app Day 66. He is a 28-year-old man, 1.74 m, 80 kg, aiming for about 2200 kcal and 160 g protein a day, mostly fish, legumes and vegetables. This is his ${slotName}.${f.description?` He describes it as: "${f.description}".`:''}${f.blob?' A photo of it is attached.':''}${f.grams?` The total weight on the plate was ${f.grams} g: scale your estimate to that weight.`:' No weight was given: assume a normal adult portion.'} Identify the foods and portion sizes, then estimate totals. Be realistic about oil, dressings and frying. Return JSON only: {"description": "short name of the meal, max 8 words", "grams": estimated total grams as a number, "kcal": number, "protein_g": number, "fat_g": number, "carb_g": number, "fibre_g": number, "tip": "one plain sentence in British spelling, no exclamation marks, no em dashes, about this meal against his protein and calorie targets"}`;
+  const opts={modelTier:'default'};if(f.blob&&sampleImages)opts.images=[f.blob];
+  const r=await sampleFn.json(prompt,opts);
+  if(S.sheet&&S.sheet.form===f){Object.assign(f,{description:f.description||r.description,dish:r.description,grams:f.grams||Math.round(+r.grams||0)||'',kcal:Math.round(+r.kcal||0),p:r1(+r.protein_g||0),f:r1(+r.fat_g||0),c:r1(+r.carb_g||0),fi:r1(+r.fibre_g||0),tip:r.tip||'',estimated:true,busy:false});render()}
+ }catch(e){f.busy=false;f.showNums=true;f.error=e&&e.code==='not_granted'?'Claude was not allowed here. Type the numbers below instead.':'The calculation did not come through. Try again, or type the numbers below.';render()}
 }
 
 /* ========= Boot ========= */

@@ -228,7 +228,7 @@ const BREAKFASTS=[
  {id:'bburrito',n:'Breakfast burrito: beans, two eggs, spinach, salsa',g:330,kcal:450,p:28,f:17,c:45,fi:9}];
 const SNACKS=[
  {id:'skyr',n:'Skyr 200 g with fruit',g:300,kcal:200,p:20,f:1,c:26,fi:3},
- {id:'bar',n:'Protein bar',g:60,kcal:200,p:20,f:7,c:20,fi:3},
+ {id:'bar',n:'Bodylab protein bar',g:55,kcal:200,p:16,f:7,c:18,fi:3},
  {id:'nuts',n:'30 g nuts and an apple',g:210,kcal:250,p:7,f:16,c:24,fi:6}];
 const DINNERS=[
  {id:'burrito',n:'Bean and rice burritos',g:480,kcal:680,p:34,f:18,c:100,fi:18,note:'80 g dry rice, 150 g beans, peppers, salsa, 30 g cheese. 100 g skyr on the side adds 10 g protein.'},
@@ -513,7 +513,7 @@ function viewEat(){
 function planCard(t){const n=Math.max(1,dayNum(t));const din=DINNERS[(n-1)%DINNERS.length];const wk=weekday(t);const ms=mealsOn(t);
  const find=id=>BREAKFASTS.concat(SNACKS,DINNERS,LUNCHES).find(x=>x.id===id);
  const rows=[['breakfast','07:00',['shake','bburrito']],['snack1','10:30',['skyr','bar']],['lunch','12:30',['canteen']],['snack2','15:30',['nuts','skyr']],['dinner','19:30',[din.id]]];
- const short={shake:'Shake',bburrito:'Burrito',skyr:'Skyr',bar:'Protein bar',canteen:'Canteen plate',nuts:'Nuts and apple'};
+ const short={shake:'Shake',bburrito:'Burrito',skyr:'Skyr',bar:'Bodylab bar',canteen:'Canteen plate',nuts:'Nuts and apple'};
  return `<div class="section" style="margin-top:20px"><h2>Today's plate plan</h2><p class="muted small" style="margin:-4px 0 8px">Tap what you ate and it is logged. Tap again to undo.</p><div class="list">${rows.map(([sl,tm,ids])=>{const got=ms.find(m=>m.slot===sl&&m.source==='plan');
   return `<div class="item"><div class="l"><div class="d">${tm}, ${SLOTS.find(x=>x[0]===sl)[1].toLowerCase()}</div><div class="row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:6px">${ids.map(id=>{const x=find(id);const on=got&&got.dish===x.n;return `<button class="pill ${on?'gold':''}" style="padding:8px 12px;font-size:14px" data-act="quicklog" data-slot="${sl}" data-dish="${id}">${on?'Done, ':''}${short[id]||x.n}</button>`}).join('')}</div></div></div>`}).join('')}</div>${wk===0?'<p class="muted small" style="margin-top:8px">Sunday: cook the rice, beans and lentils for three days, and measure the waist tonight.</p>':''}</div>`}
 function coachNote(){
@@ -741,7 +741,7 @@ window.addEventListener('hashchange',()=>{let h=location.hash.slice(1);if(h==='y
 function loadImage(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{URL.revokeObjectURL(url);res(img)};img.onerror=rej;img.src=url})}
 function drawTo(img,max,q){const c=document.createElement('canvas');const r=Math.min(1,max/Math.max(img.width,img.height));c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return new Promise(res=>c.toBlob(b=>res({blob:b,dataUrl:c.toDataURL('image/jpeg',q)}),'image/jpeg',q))}
 const FOODS=[ // per 100 g: kcal, protein, fat, carbs, fibre; piece = grams of one; def = usual grams
- [/protein ?bar/,360,33,12,35,5,60,60],[/whey|protein (shake|powder)/,380,78,5,8,0,0,30],[/greek/,97,9,5,4,0,0,170],[/skyr/,63,11,.2,4,0,0,200],[/yogh?urt/,61,3.5,3.3,4.7,0,0,150],
+ [/bodylab|protein ?bar/,364,29,12.7,33,5.5,55,55],[/whey|protein (shake|powder)/,380,78,5,8,0,0,30],[/greek/,97,9,5,4,0,0,170],[/skyr/,63,11,.2,4,0,0,200],[/yogh?urt/,61,3.5,3.3,4.7,0,0,150],
  [/alcohol.?free beer|0[,.]0 beer/,25,.3,0,5,0,330,330],[/olive oil|\boil\b/,884,0,100,0,0,13,13],[/peanut butter/,590,25,50,20,6,0,15],[/dark chocolate|chocolate/,600,7.8,43,46,11,0,20],
  [/apple/,52,.3,.2,14,2.4,180,180],[/banana/,89,1.1,.3,23,2.6,120,120],[/orange|clementine|mandarin/,47,.9,.1,12,2.4,150,150],[/pear/,57,.4,.1,15,3.1,180,180],[/kiwi/,61,1.1,.5,15,3,75,75],[/grape/,69,.7,.2,18,.9,0,100],[/berr/,50,.8,.3,12,2.4,0,100],[/avocado/,160,2,15,9,7,150,150],
  [/\beggs?\b/,143,12.6,9.5,.7,0,55,55],[/oat|porridge/,379,13,6.5,67,10,0,40],[/granola|muesli/,450,10,15,65,7,0,50],[/milk/,47,3.4,1.5,4.8,0,0,250],[/tortilla|wrap/,300,8,7,50,3,60,60],[/bread|toast|slice/,250,9,3.2,47,6,40,40],

@@ -148,7 +148,7 @@ a{color:var(--gold)}
 'use strict';
 /* ========= Plan data (from the plan written with Adolfo on 9 Nov 2026) ========= */
 const START='2026-11-10', TOTAL=66;
-const DEF_SETTINGS={startDate:START,birthday:'',gym:'',bedTime:'23:00',wakeWeekday:'06:30',wakeWeekend:'08:30',maintenance:2600,
+const DEF_SETTINGS={startDate:START,birthday:'2026-11-13',gym:'',bedTime:'23:00',wakeWeekday:'06:30',wakeWeekend:'08:30',maintenance:2600,
   targets:{kcal:2200,protein:160,fat:65,carb:245,fibre:35,water:2500},rewards:{day21:'',day66:''}};
 const SENTENCES=[
  {id:'s1',slot:'morning',text:'Remember the bigger picture. Remember the plan. Remember who you really are. And most importantly, remember who you want to become.'},
@@ -569,7 +569,8 @@ function viewScene(){
 function sceneFor(k){
  const m=S.meditations[k];if(m&&m.scene)return {kind:m.kind,text:m.scene};
  const n=dayNum(k);
- if(n>=1&&n<=14)return SCENES[n-1];
+ const bd=S.settings.birthday?dayNum(S.settings.birthday):0,swap=bd>=1&&bd<=14&&bd!==10;
+ if(n>=1&&n<=14)return SCENES[swap&&n===bd?9:swap&&n===10?bd-1:n-1];
  if(n<1)return {kind:'outcome',text:SCENES[0].text};
  if(S.sceneLoading===k)return {kind:n%2?'outcome':'obstacle',text:'',loading:true};
  const fb=FALLBACK_SCENES[(n-15)%FALLBACK_SCENES.length];
